@@ -12,17 +12,17 @@ EV = ['TSLA', 'NIO', 'LI', 'XPEV', 'KNDI']
 Ecommerce = ['AMZN', 'BABA', 'SE', 'JD']
 Tech = ['DBX', 'MSFT', 'GOOG', 'BOX']
 Semicon = ['NVDA', 'AMD', 'QCOM', 'SWKS']
-Cloud = ['DBX', 'BOX']
+Cloud = ['DBX', 'DOCU']
 
 # Input your API key
 api = '9986f4c3a10c45418d13105f50ee7f94'
 
 # Input the companies for evaluation
-company = ['AAPL', 'TSLA']
+company = Cloud
 
 # Input number of years for evaluation and ending financial year
-end_year = 2018
-years = 3
+end_year = 2019
+years = 4
 
 # Rejecting input if end_year is same or greater than the current year
 # Rationale is that most companies financial reports for the current year are not out yet
@@ -31,11 +31,6 @@ if end_year >= now.year:
     print("End year cannot be in the future!!")
     sys.exit()
 
-# Creating dates array
-dates = []
-
-for i in range(0, years):
-    dates.append(end_year - i)
 
 # This value needs to be added to the dictionary in FMP to pull the data from the correct years
 # E.g. if our end_year is 2018 but currently we are in 2020, we need to pull one year behind
@@ -45,13 +40,10 @@ p = now.year - end_year - 1
 # Create loop to pulls multiple companies
 n = len(company)
 
-# Create loop to pull the different years
-m = len(dates)
-millions = 1000000
 
 # Create empty Dataframe to store consolidated table
 fundamentals_total = pd.DataFrame()
-
+millions = 1000000
 
 for i in range(0, n):
 
@@ -79,6 +71,27 @@ for i in range(0, n):
     else:
         q = 0
 
+    # Check whether the statements above have even one year of data
+    if (len(IS)-p-q <= 0) | (len(BS)-p-q <= 0) | (len(CF)-p-q <= 0) | (len(FG)-p-q <= 0) | (len(Ratios)-p-q <= 0) | (len(key_Metrics)-p-q <= 0):
+        print('Data not available on FMP due to %s' % (company[i]))
+        print("IS is %s, BS is %s, CF is %s, FG is %s, Ratios is %s, key_Metrics is %s"
+              % (len(IS), len(BS), len(CF), len(FG), len(Ratios), len(key_Metrics)))
+        sys.exit()
+
+    # Check whether the companies have sufficient data for the number of years specified
+    min_data = min(len(IS)-p-q, len(BS)-p-q, len(CF)-p-q, len(FG) -
+                   p-q, len(Ratios)-p-q, len(key_Metrics)-p-q)
+
+    if min_data >= years:
+        m = years
+    else:
+        m = min_data
+
+    # Creating the dates array
+    dates = []
+    for x in range(0, m):
+        dates.append(end_year - x)
+
     # Create empty dictionary and add the financials to it
     financials = {}
 
@@ -86,6 +99,9 @@ for i in range(0, n):
     for j in range(0, m):
         # Creates an empty nested dictionary, i.e. the year is a main key and each parameter is a subkey within the year
         financials[dates[j]] = {}
+
+        # Creates the year column
+        financials[dates[j]]['Dates'] = dates[j]
 
         # From Income Sheet
         financials[dates[j]]['Revenue'] = IS[j+p+q]['revenue'] / millions
@@ -108,7 +124,7 @@ for i in range(0, n):
         financials[dates[j]]['LT Assets'] = BS[j+p+q]['totalNonCurrentAssets'] / millions
         financials[dates[j]]['Int Assets'] = BS[j+p+q]['intangibleAssets'] / millions
         financials[dates[j]]['Total Assets'] = BS[j+p+q]['totalAssets'] / millions
-        #Liabilities and Equity
+        # Liabilities and Equity
         financials[dates[j]]['Cur Liab'] = BS[j+p+q]['totalCurrentLiabilities'] / millions
         financials[dates[j]]['LT Debt'] = BS[j+p+q]['longTermDebt'] / millions
         financials[dates[j]]['LT Liab'] = BS[j+p+q]['totalNonCurrentLiabilities'] / millions
@@ -161,10 +177,6 @@ for i in range(0, n):
     # Concatenate the 2 dataframes together
     fundamentals_total = pd.concat([fundamentals_total, fundamentals_single])
 
-
-# Add the date column into the DataFrame to make it suitable to convert into a pivottable
-date_column = dates * len(company)
-fundamentals_total.insert(0, "Date", date_column, True)
 
 # Export to Excel or directly to pivot table
 pivot_ui(fundamentals_total)

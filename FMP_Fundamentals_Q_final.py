@@ -21,7 +21,7 @@ api = '9986f4c3a10c45418d13105f50ee7f94'
 company = ['AAPL', 'FB']
 
 # Input number of quarters for evaluation and ending financial year
-quarters_num = 5
+quarters_num = 8
 end_year = 2020
 end_quar = 3
 
@@ -58,11 +58,27 @@ for i in range(0, n):
     FG = requests.get(
         f'https://financialmodelingprep.com/api/v3/financial-growth/{company[i]}?period=quarter&apikey={api}').json()
 
+    # Check whether the statements above have the data of those years specified above
+    if (len(IS)-p <= 0) | (len(BS)-p <= 0) | (len(CF)-p <= 0) | (len(FG)-p <= 0) | (len(Ratios)-p <= 0) | (len(key_Metrics)-p <= 0):
+        print('Data not available on FMP due to %s' % (company[i]))
+        print("IS is %s, BS is %s, CF is %s, FG is %s, Ratios is %s, key_Metrics is %s"
+              % (len(IS), len(BS), len(CF), len(FG), len(Ratios), len(key_Metrics)))
+        sys.exit()
+
+    # Check whether the companies have sufficient data for the number of years specified
+    min_data = min(len(IS)-p, len(BS)-p, len(CF)-p, len(FG) -
+                   p, len(Ratios)-p, len(key_Metrics)-p)
+
+    if min_data >= quarters_num:
+        m = quarters_num
+    else:
+        m = min_data
+
     # Create empty dictionary and add the financials to it
     financials = {}
 
     # Loop for the different quarters
-    for j in range(0, quarters_num):
+    for j in range(0, m):
         # Creates an empty nested dictionary, i.e. the year is a main key and each parameter is a subkey within the year
         financials[j] = {}
 
